@@ -1,28 +1,29 @@
-import cors from 'cors'
-import express from "express"
+// ✅ Load environment variables first
 import path from "path";
+import dotenv from "dotenv";
+
+// Always resolve from project root, not dist folder
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+
+import cors from "cors";
+import express from "express";
 import { RouteNotFound } from "./middlewares/route-not-found";
 import EventRouter from "./routes/EventRoutes";
-import dotenv from "dotenv";
-import PaymentRouter from './routes/PaymentRoute';
+import PaymentRouter from "./routes/PaymentRoute";
 
-dotenv.config({
-	path: path.resolve(__dirname, "../.env"),
-});
-
-const app: express.Application = express();
-
+// 🔐 Validate required env vars immediately
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
 	console.error("Razorpay credentials are not set in the environment variables.");
 	process.exit(1);
 }
 
+// Setup Express
+const app: express.Application = express();
+
+// Parse ALLOWED_ORIGINS as array from comma-separated string
 let allowedOrigins: string[] = [];
 if (process.env.ALLOWED_ORIGINS) {
-	allowedOrigins = process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim());
-}
-else {
-	allowedOrigins = ["http://localhost:5173"];
+	allowedOrigins = process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim());
 }
 
 console.log("Allowed Origins: ", allowedOrigins);
@@ -44,17 +45,19 @@ app.use(
 
 app.use(express.json());
 
+// Routes
 app.use('/api/v1/events', EventRouter);
 app.use('/api/v1/payment', PaymentRouter);
 
-app.use(RouteNotFound)
+// 404 handler
+app.use(RouteNotFound);
 
-let port = process.env.PORT || 3000;
-
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
 	console.log("Server is running on port " + port);
 });
 
+// Graceful shutdown
 function setupGracefulShutdown() {
 	const shutdown = () => {
 		console.log("\n🛑 Shutting down gracefully...");
@@ -65,8 +68,4 @@ function setupGracefulShutdown() {
 	process.on('SIGINT', shutdown);
 	process.on('SIGTERM', shutdown);
 }
-
 setupGracefulShutdown();
-
-
-// node --env-file=.env dist/index.js
