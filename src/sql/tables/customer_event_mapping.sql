@@ -1,4 +1,4 @@
-CREATE TYPE payment_status AS ENUM ('created', 'paid', 'failed', 'refunded');
+CREATE TYPE payment_status AS ENUM ('created', 'paid', 'failed', 'refunded', 'attempted');
 
 CREATE TABLE IF NOT EXISTS event_purchases (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

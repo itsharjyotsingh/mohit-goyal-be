@@ -10,6 +10,7 @@ import express from "express";
 import { RouteNotFound } from "./middlewares/route-not-found";
 import EventRouter from "./routes/EventRoutes";
 import PaymentRouter from "./routes/PaymentRoute";
+import UserRouter from "./routes/UserRoutes";
 
 // 🔐 Validate required env vars immediately
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -39,6 +40,8 @@ app.use(
 			"Origin",
 			"X-Requested-With",
 			"X-CSRF-Token",
+			"ishidden",
+			"showCustomerDetails"
 		],
 	})
 );
@@ -48,6 +51,7 @@ app.use(express.json());
 // Routes
 app.use('/api/v1/events', EventRouter);
 app.use('/api/v1/payment', PaymentRouter);
+app.use('/api/v1/users', UserRouter);
 
 // 404 handler
 app.use(RouteNotFound);
