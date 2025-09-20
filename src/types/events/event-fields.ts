@@ -4,6 +4,7 @@ export type EventsFields = {
 
 export type EventsRequestBody = {
     price: number,
+    originalPrice: number,
     title: string,
     description: string[],
     eventDate: Date,

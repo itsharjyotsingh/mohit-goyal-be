@@ -1,5 +1,6 @@
 CREATE TABLE events (
     id UUID PRIMARY KEY,
+    original_price INT NOT NULL,
     price INT NOT NULL,
     title TEXT NOT NULL,
     description TEXT[],

@@ -1,1 +1,1 @@
-select * from event_purchases;
+select * from customers;

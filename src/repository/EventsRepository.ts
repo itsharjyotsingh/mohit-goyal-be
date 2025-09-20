@@ -76,6 +76,7 @@ class EventsRepository {
 SELECT
   e.id,
   e.price,
+  e.original_price,
   e.title,
   e.description,
   e.event_date,
@@ -156,7 +157,7 @@ FROM events e
 LEFT JOIN event_purchases ep ON ep.event_id = e.id
 ${whereSql}
 GROUP BY
-  e.id, e.price, e.title, e.description, e.event_date, e.event_time,
+  e.id, e.price, e.original_price, e.title, e.description, e.event_date, e.event_time,
   e.event_duration, e.is_hidden, e.image_url, e.created_at, e.updated_at
 ORDER BY e.created_at DESC
 `;
@@ -171,6 +172,7 @@ ORDER BY e.created_at DESC
       SELECT
         e.id,
         e.price,
+        e.original_price,
         e.title,
         e.description,
         e.event_date,
@@ -198,17 +200,18 @@ ORDER BY e.created_at DESC
     try {
       const queryText = `
         INSERT INTO events (
-          id, price, title, description, event_date, event_time, event_duration, is_hidden, image_url
+          id, price, original_price, title, description, event_date, event_time, event_duration, is_hidden, image_url
         )
         VALUES (
           uuid_generate_v4(),
-          $1, $2, $3, $4, $5, $6, $7, $8
+          $1, $2, $3, $4, $5, $6, $7, $8, $9
         )
         RETURNING *;
       `;
 
       const values = [
         body.price,
+        body.originalPrice,
         body.title,
         body.description,
         body.eventDate,

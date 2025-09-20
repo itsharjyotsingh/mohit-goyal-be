@@ -1,6 +1,7 @@
 import { razorpay } from "../config/razorpayClient";
 import crypto from "crypto";
 import { PaymentsRepository } from "../repository/PaymentsRepository";
+import { EmailService } from "./EmailService";
 
 export interface CreateOrderInput {
   customer_name: string;
@@ -104,6 +105,12 @@ export class PaymentsService {
       throw new Error("Missing required customer or event details in Razorpay order notes.");
     }
 
+    // Get event details for email content
+    const event = await PaymentsRepository.findEventById(eventId.toString());
+    if (!event) {
+      throw new Error("Event not found for email sending");
+    }
+
     // Ensure customer exists (idempotent)
     await PaymentsRepository.findOrCreateCustomer(
       String(customerName),
@@ -119,6 +126,95 @@ export class PaymentsService {
       "paid"
     );
 
+    // Send confirmation email to customer
+    try {
+      await this.sendPaymentConfirmationEmail({
+        customerName: String(customerName),
+        customerEmail: String(customerEmail),
+        eventDetails: event,
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id,
+        amount: order.amount.toString(),
+        description: String(description)
+      });
+    } catch (emailError) {
+      // Log error but don't fail the payment verification
+      console.error("Failed to send confirmation email:", emailError);
+      // You might want to add this to a queue for retry later
+    }
+
     return { success: true, message: "Payment verified and saved" };
+  }
+
+  /**
+   * Send payment confirmation email to customer
+   */
+  private static async sendPaymentConfirmationEmail(params: {
+    customerName: string;
+    customerEmail: string;
+    eventDetails: any; // Replace with your event type
+    paymentId: string;
+    orderId: string;
+    amount: string;
+    description: string;
+  }) {
+    const {
+      customerName,
+      customerEmail,
+      eventDetails,
+      paymentId,
+      orderId,
+      amount,
+      description
+    } = params;
+
+    const emailData = {
+      to: customerEmail,
+      subject: `Payment Confirmation - ${eventDetails.name || 'Workshop Registration'}`,
+      templateData: {
+        customerName,
+        eventName: eventDetails.title || 'Financial Workshop',
+        eventDate: eventDetails.event_date ? new Date(eventDetails.event_date).toLocaleDateString() : 'TBD',
+        eventTime: eventDetails.event_time || 'TBD',
+        paymentId,
+        orderId,
+        amount: (Number(amount) / 100).toFixed(2), // Convert paise to rupees
+        description,
+        whatsappLink: process.env.WHATSAPP_GROUP_LINK || '#',
+        supportEmail: process.env.SUPPORT_EMAIL || 'support@themohitgoyal.com'
+      }
+    };
+
+    await EmailService.sendPaymentConfirmation(emailData);
+  }
+
+  /**
+   * Send email notification to admin about new payment
+   */
+  static async sendAdminNotification(params: {
+    customerName: string;
+    customerEmail: string;
+    customerMobile: string;
+    eventName: string;
+    paymentId: string;
+    amount: number;
+  }) {
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@themohitgoyal.com';
+
+    const emailData = {
+      to: adminEmail,
+      subject: `New Payment Received - ${params.eventName}`,
+      templateData: {
+        customerName: params.customerName,
+        customerEmail: params.customerEmail,
+        customerMobile: params.customerMobile,
+        eventName: params.eventName,
+        paymentId: params.paymentId,
+        amount: (params.amount / 100).toFixed(2),
+        timestamp: new Date().toLocaleString()
+      }
+    };
+
+    await EmailService.sendAdminNotification(emailData);
   }
 }
